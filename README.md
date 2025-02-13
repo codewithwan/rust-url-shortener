@@ -43,7 +43,7 @@ Install PostgreSQL and create a database named `shortlink`.
 Create a `.env` file in the root directory with the following content:
 
 ```properties
-DATABASE_URL=postgres://postgres:Ridwan123%23@localhost:5432/shortlink
+DATABASE_URL=postgres://postgres:password@localhost:5432/shortlink
 BASE_URL=http://localhost:3030
 RUST_ENV=development
 ```
