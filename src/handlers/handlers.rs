@@ -14,10 +14,18 @@ pub async fn shorten_url(body: ShortenRequest, db_pool: Pool) -> Result<impl Rep
     let client = db_pool
         .get()
         .await
-        .map_err(|_| warp::reject::custom(DbError::DatabaseError))?;
+        .map_err(|e| {
+            error!("Failed to get DB client: {:?}", e);
+            warp::reject::custom(DbError::DatabaseError)
+        })?;
     let validated_url = validate_link(body.url.clone())?;
     let short_code = Uuid::new_v4().to_string()[..8].to_string();
-    insert_shortlink(&client, &short_code, &validated_url).await;
+    insert_shortlink(&client, &short_code, &validated_url)
+        .await
+        .map_err(|e| {
+            error!("Failed to insert shortlink: {:?}", e);
+            warp::reject::custom(DbError::DatabaseError)
+        })?;
     let base_url = env::var("BASE_URL").expect("BASE_URL is not set in .env");
     let response = ShortenResponse {
         short_url: format!("{}/{}", base_url, short_code),
@@ -32,7 +40,7 @@ pub async fn redirect_url(code: String, db_pool: Pool) -> Result<Box<dyn Reply>,
         .get()
         .await
         .map_err(|_| warp::reject::custom(DbError::DatabaseError))?;
-    if let Some(original_url) = get_original_url(&client, &code).await {
+    if let Ok(Some(original_url)) = get_original_url(&client, &code).await {
         let uri: warp::http::Uri = original_url.parse().unwrap();
         info!("Redirecting short code {} to {}", code, original_url);
         Ok(Box::new(warp::redirect::temporary(uri)))
@@ -63,4 +71,11 @@ pub async fn handle_rejection(err: Rejection) -> Result<Box<dyn Reply>, Rejectio
             StatusCode::INTERNAL_SERVER_ERROR,
         )))
     }
+}
+
+/// Health check handler to verify database connectivity.
+pub async fn health_check(db_pool: Pool) -> Result<impl Reply, Rejection> {
+    let client = db_pool.get().await.map_err(|_| warp::reject::custom(crate::db::db::DbError::DatabaseError))?;
+    client.simple_query("SELECT 1").await.map_err(|_| warp::reject::custom(crate::db::db::DbError::DatabaseError))?;
+    Ok(warp::reply::with_status("OK", StatusCode::OK))
 }

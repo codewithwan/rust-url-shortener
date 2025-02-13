@@ -6,6 +6,7 @@ use tokio::sync::Mutex;
 use warp::filters::BoxedFilter;
 use warp::reject::Rejection;
 use warp::Filter;
+use std::env;
 
 #[derive(Debug)]
 pub struct TooManyRequests;
@@ -22,6 +23,11 @@ pub async fn rate_limit(
     ip: IpAddr,
     rate_limiter: Arc<Mutex<HashMap<IpAddr, (u32, Instant)>>>,
 ) -> Result<(), Rejection> {
+    // Check if the environment is development
+    if env::var("RUST_ENV").unwrap_or_else(|_| "development".to_string()) == "development" {
+        return Ok(());
+    }
+
     let mut requests = rate_limiter.lock().await;
     let current_time = Instant::now();
     let entry = requests.entry(ip).or_insert((0, current_time));
