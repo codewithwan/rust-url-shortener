@@ -20,8 +20,8 @@ This project is a URL shortener service built with Rust, Warp, and PostgreSQL. I
 ### Clone the repository
 
 ```sh
-git clone https://github.com/yourusername/url-shortener.git
-cd url-shortener
+git clone https://github.com/codewithwan/rust-url-shortener.git
+cd rust-url-shortener
 ```
 
 ### Setup PostgreSQL
@@ -31,7 +31,7 @@ You can either install PostgreSQL locally or use Docker to run a PostgreSQL cont
 #### Using Docker
 
 ```sh
-docker run --name url-shortener-db -e POSTGRES_PASSWORD=Ridwan123# -e POSTGRES_DB=shortlink -p 5432:5432 -d postgres
+docker run --name url-shortener-db -e POSTGRES_PASSWORD=your_password -e POSTGRES_DB=shortlink -p 5432:5432 -d postgres
 ```
 
 #### Locally
