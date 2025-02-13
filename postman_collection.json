@@ -1,0 +1,88 @@
+{
+  "info": {
+    "name": "Time to Rust API",
+    "description": "Postman collection for testing Time to Rust API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Shorten URL",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"url\": \"https://example.com\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:3030/shorten",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "3030",
+          "path": [
+            "shorten"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Redirect URL",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:3030/{short_code}",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "3030",
+          "path": [
+            "{short_code}"
+          ],
+          "variable": [
+            {
+              "key": "short_code",
+              "value": "your_short_code_here"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:3030/health",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "3030",
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
