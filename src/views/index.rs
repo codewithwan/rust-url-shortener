@@ -2,7 +2,7 @@ use warp::Rejection;
 use warp::Reply;
 
 pub async fn index() -> Result<impl Reply, Rejection> {
-    let html = r#"
+    let html = r##"
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -83,11 +83,29 @@ pub async fn index() -> Result<impl Reply, Rejection> {
                                 </button>
                             </div>
                         </div>
+                        <div class="mt-4">
+                            <label class="text-sm font-medium text-gray-700">QR Code:</label>
+                            <div class="flex flex-col items-center space-y-2">
+                                <img id="qr-code" src="#" alt="QR Code" class="w-32 h-32">
+                                <a 
+                                    id="download-link" 
+                                    href="#" 
+                                    download="qrcode_url.png" 
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                                >
+                                    Download QR Code
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
+            <footer class="text-center mt-8 text-gray-600">
+                <p>&copy; <span id="current-year"></span> <a href="https://github.com/codewithwan/rust-url-shortener" class="text-blue-600 hover:underline">codewithwan</a>. All rights reserved.</p>
+            </footer>
             <script>
+                document.getElementById('current-year').textContent = new Date().getFullYear();
+
                 async function shortenUrl() {
                     const urlInput = document.getElementById('url');
                     const button = document.getElementById('shorten-button');
@@ -96,7 +114,6 @@ pub async fn index() -> Result<impl Reply, Rejection> {
                     const validationMessage = document.getElementById('validation-message');
                     const result = document.getElementById('result');
 
-                    // URL validation
                     try {
                         new URL(urlInput.value);
                         validationMessage.classList.add('hidden');
@@ -106,7 +123,6 @@ pub async fn index() -> Result<impl Reply, Rejection> {
                         return;
                     }
 
-                    // Loading state
                     button.disabled = true;
                     buttonText.classList.add('hidden');
                     spinner.classList.remove('hidden');
@@ -121,13 +137,13 @@ pub async fn index() -> Result<impl Reply, Rejection> {
                         });
                         const data = await response.json();
                         
-                        // Show result
                         document.getElementById('shortened-url').value = data.short_url;
+                        document.getElementById('qr-code').src = data.qr_code;
+                        document.getElementById('download-link').href = data.qr_code;
                         result.classList.remove('hidden');
                     } catch (error) {
                         alert('An error occurred. Please try again.');
                     } finally {
-                        // Reset button state
                         button.disabled = false;
                         buttonText.classList.remove('hidden');
                         spinner.classList.add('hidden');
@@ -139,7 +155,6 @@ pub async fn index() -> Result<impl Reply, Rejection> {
                     shortenedUrl.select();
                     document.execCommand('copy');
                     
-                    // Show feedback
                     const copyButton = document.querySelector('button:last-of-type');
                     const originalText = copyButton.textContent;
                     copyButton.textContent = 'Copied!';
@@ -148,7 +163,6 @@ pub async fn index() -> Result<impl Reply, Rejection> {
                     }, 2000);
                 }
 
-                // Enable enter key submission
                 document.getElementById('url').addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
                         shortenUrl();
@@ -157,6 +171,6 @@ pub async fn index() -> Result<impl Reply, Rejection> {
             </script>
         </body>
         </html>
-    "#;
+    "##;
     Ok(warp::reply::html(html))
 }
