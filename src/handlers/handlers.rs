@@ -64,18 +64,35 @@ pub async fn handle_rejection(err: Rejection) -> Result<Box<dyn Reply>, Rejectio
         Ok(Box::new(warp::redirect::temporary(
             "/".parse::<warp::http::Uri>().unwrap(),
         )))
-    } else {
-        error!("Internal server error: {:?}", err);
+    } else if let Some(_) = err.find::<crate::utils::validate::InvalidLink>() {
+        error!("Invalid link provided");
         Ok(Box::new(with_status(
-            json(&serde_json::json!({ "error": "Internal Server Error" })),
+            json(&serde_json::json!({ "error": "Invalid link provided" })),
+            StatusCode::BAD_REQUEST,
+        )))
+    } else if let Some(_) = err.find::<crate::utils::rate_limit::TooManyRequests>() {
+        error!("Too many requests");
+        Ok(Box::new(with_status(
+            json(&serde_json::json!({ "error": "Too many requests, slow down!" })),
+            StatusCode::TOO_MANY_REQUESTS,
+        )))
+    } else if let Some(_) = err.find::<crate::db::db::DbError>() {
+        error!("Database error occurred");
+        Ok(Box::new(with_status(
+            json(&serde_json::json!({ "error": "Database error occurred" })),
+            StatusCode::INTERNAL_SERVER_ERROR,
+        )))
+    } else if err.find::<warp::reject::MethodNotAllowed>().is_some() {
+        error!("Method not allowed");
+        Ok(Box::new(with_status(
+            json(&serde_json::json!({ "error": "Method not allowed" })),
+            StatusCode::METHOD_NOT_ALLOWED,
+        )))
+    } else {
+        error!("Unhandled rejection: {:?}", err);
+        Ok(Box::new(with_status(
+            json(&serde_json::json!({ "error": "Unhandled rejection" })),
             StatusCode::INTERNAL_SERVER_ERROR,
         )))
     }
-}
-
-/// Health check handler to verify database connectivity.
-pub async fn health_check(db_pool: Pool) -> Result<impl Reply, Rejection> {
-    let client = db_pool.get().await.map_err(|_| warp::reject::custom(crate::db::db::DbError::DatabaseError))?;
-    client.simple_query("SELECT 1").await.map_err(|_| warp::reject::custom(crate::db::db::DbError::DatabaseError))?;
-    Ok(warp::reply::with_status("OK", StatusCode::OK))
 }

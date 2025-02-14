@@ -7,7 +7,6 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio_postgres::{Config, NoTls};
 use utils::rate_limit::with_ip_rate_limit;
-use utils::validate::error_handler;
 use warp::Filter;
 
 mod db;
@@ -25,9 +24,8 @@ async fn main() {
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env");
 
-    // Setup connection pool for PostgreSQL using Config
-    let mut config = Config::new();
-    config.host(&database_url);
+    // Parse the database URL
+    let config: Config = database_url.parse().expect("Invalid DATABASE_URL");
 
     // Create Manager from the configured settings
     let mgr = Manager::new(config, NoTls);
@@ -36,14 +34,26 @@ async fn main() {
         .build()
         .unwrap();
 
+    // Check database connection
+    match pool.get().await {
+        Ok(_) => println!("Successfully connected to the database."),
+        Err(e) => {
+            eprintln!("Failed to connect to the database: {:?}", e);
+            eprintln!("Please check the DATABASE_URL and ensure the database server is reachable.");
+            std::process::exit(1);
+        }
+    }
+
     let rate_limiter = Arc::new(Mutex::new(HashMap::new()));
 
     let routes = routes::routes::create_routes(pool.clone())
         .and(with_ip_rate_limit(rate_limiter.clone()))
-        .recover(error_handler)
+        .recover(utils::validate::error_handler) // Ensure the correct error handler is used
         .with(warp::log("warp::server"));
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    let port = 3030;
+    println!("Server is running on port {}", port);
+    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
 
     if env::var("RUST_ENV").unwrap_or_else(|_| "development".to_string()) == "production" {
         let base_url = env::var("BASE_URL").unwrap_or_else(|_| "http://127.0.0.1:3030".to_string());

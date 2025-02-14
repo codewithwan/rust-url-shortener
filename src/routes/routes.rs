@@ -1,4 +1,4 @@
-use crate::handlers::{handle_rejection, redirect_url, shorten_url, health_check};
+use crate::handlers::{handle_rejection, health_check::health_check, redirect_url, shorten_url};
 use crate::views::index::index;
 use deadpool_postgres::Pool;
 use warp::Filter;
@@ -24,14 +24,14 @@ pub fn create_routes(db_pool: Pool) -> warp::filters::BoxedFilter<(impl warp::Re
 
     let health_route = warp::get()
         .and(warp::path("health"))
-        .and(with_db(db_pool.clone()))
-        .and_then(health_check)
+        .and_then(move || health_check(db_pool.clone()))
         .boxed();
 
-    index_route
-        .or(shorten)
-        .or(redirect)
+    // Ensure the redirect route is prioritized correctly
+    redirect
+        .or(index_route)
         .or(health_route)
+        .or(shorten)
         .recover(handle_rejection)
         .boxed()
 }
