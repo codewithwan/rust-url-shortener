@@ -9,6 +9,13 @@ use uuid::Uuid;
 use warp::http::StatusCode;
 use warp::reply::{json, with_status};
 use warp::{Rejection, Reply};
+use qrcode::QrCode;
+use image::Luma;
+use image::codecs::png::PngEncoder;
+use image::ImageEncoder;
+use base64::engine::general_purpose::STANDARD as base64_std;
+use base64::Engine as _; 
+use std::io::Cursor;
 
 /// Handler to shorten a URL.
 pub async fn shorten_url(body: ShortenRequest, db_pool: Pool) -> Result<impl Reply, Rejection> {
@@ -28,8 +35,18 @@ pub async fn shorten_url(body: ShortenRequest, db_pool: Pool) -> Result<impl Rep
             warp::reject::custom(DbError::DatabaseError)
         })?;
     let base_url = env::var("BASE_URL").expect("BASE_URL is not set in .env");
+    let short_url = format!("{}/{}", base_url, short_code);
+
+    // Generate QR code from short_url
+    let code = QrCode::new(&short_url).unwrap();
+    let image = code.render::<Luma<u8>>().build();
+    let mut buffer = Cursor::new(Vec::new());
+    PngEncoder::new(&mut buffer).write_image(&image, image.width(), image.height(), image::ExtendedColorType::L8).unwrap();
+    let qr_base64 = base64_std.encode(buffer.into_inner());
+
     let response = ShortenResponse {
-        short_url: format!("{}/{}", base_url, short_code),
+        short_url,
+        qr_code: format!("data:image/png;base64,{}", qr_base64),
     };
     info!("Shortened URL: {} -> {}", body.url, response.short_url);
     Ok(warp::reply::json(&response))
