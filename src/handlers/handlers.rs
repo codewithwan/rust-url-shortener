@@ -1,6 +1,7 @@
 use crate::db::db::{get_original_url, insert_shortlink, DbError};
 use crate::models::{ShortenRequest, ShortenResponse};
 use crate::utils::validate::validate_link;
+use crate::views::not_found::not_found;
 use deadpool_postgres::Pool;
 use log::{error, info};
 use std::env;
@@ -45,20 +46,18 @@ pub async fn redirect_url(code: String, db_pool: Pool) -> Result<Box<dyn Reply>,
         info!("Redirecting short code {} to {}", code, original_url);
         Ok(Box::new(warp::redirect::temporary(uri)))
     } else {
-        info!("Short code {} not found, redirecting to /", code);
-        Ok(Box::new(warp::redirect::temporary(
-            "/".parse::<warp::http::Uri>().unwrap(),
-        )))
+        info!("Short code {} not found, displaying 404 page", code);
+        let response = not_found().await?;
+        Ok(Box::new(warp::reply::with_status(response.into_response(), StatusCode::NOT_FOUND)))
     }
 }
 
 /// Handler to manage rejections and errors.
 pub async fn handle_rejection(err: Rejection) -> Result<Box<dyn Reply>, Rejection> {
     if err.is_not_found() {
-        info!("Route not found, redirecting to /");
-        Ok(Box::new(warp::redirect::temporary(
-            "/".parse::<warp::http::Uri>().unwrap(),
-        )))
+        info!("Route not found, displaying 404 page");
+        let response = not_found().await?;
+        Ok(Box::new(warp::reply::with_status(response.into_response(), StatusCode::NOT_FOUND)))
     } else if let Some(_) = err.find::<warp::body::BodyDeserializeError>() {
         error!("Invalid request body, redirecting to /");
         Ok(Box::new(warp::redirect::temporary(
@@ -83,11 +82,9 @@ pub async fn handle_rejection(err: Rejection) -> Result<Box<dyn Reply>, Rejectio
             StatusCode::INTERNAL_SERVER_ERROR,
         )))
     } else if err.find::<warp::reject::MethodNotAllowed>().is_some() {
-        error!("Method not allowed");
-        Ok(Box::new(with_status(
-            json(&serde_json::json!({ "error": "Method not allowed" })),
-            StatusCode::METHOD_NOT_ALLOWED,
-        )))
+        info!("Method not allowed, displaying 404 page");
+        let response = not_found().await?;
+        Ok(Box::new(warp::reply::with_status(response.into_response(), StatusCode::NOT_FOUND)))
     } else {
         error!("Unhandled rejection: {:?}", err);
         Ok(Box::new(with_status(
