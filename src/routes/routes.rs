@@ -21,9 +21,8 @@ pub fn create_routes(db_pool: Pool) -> warp::filters::BoxedFilter<(impl warp::Re
 
     let index_route = warp::get().and(warp::path::end()).and_then(index).boxed();
 
-    // Ensure the routes are prioritized correctly
     index_route
-        .or(redirect) // Ensure redirect route is prioritized correctly
+        .or(redirect)
         .or(shorten)
         .or(warp::any().and_then(not_found).boxed())
         .recover(handle_rejection)

@@ -48,15 +48,15 @@ async fn main() {
 
     let routes = routes::routes::create_routes(pool.clone())
         .and(with_ip_rate_limit(rate_limiter.clone()))
-        .recover(utils::validate::error_handler) // Ensure the correct error handler is used
+        .recover(utils::validate::error_handler) 
         .with(warp::log("warp::server"));
 
-    let port = 3030;
+    let port = if env::var("RUST_ENV").unwrap_or_else(|_| "development".to_string()) == "production" {
+        env::var("PORT").unwrap_or_else(|_| "80".to_string()).parse().expect("Invalid port number")
+    } else {
+        3030
+    };
+
     println!("Server is running on port {}", port);
     warp::serve(routes).run(([127, 0, 0, 1], port)).await;
-
-    if env::var("RUST_ENV").unwrap_or_else(|_| "development".to_string()) == "production" {
-        let base_url = env::var("BASE_URL").unwrap_or_else(|_| "http://127.0.0.1:3030".to_string());
-        println!("Server is running on {}", base_url);
-    }
 }

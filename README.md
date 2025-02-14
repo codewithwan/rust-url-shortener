@@ -55,9 +55,16 @@ Create the `shortlink` table in your PostgreSQL database:
 ```sql
 CREATE TABLE shortlink (
     id SERIAL PRIMARY KEY,
-    short_code VARCHAR(8) NOT NULL,
-    original_url TEXT NOT NULL
+    short_code VARCHAR(8) NOT NULL UNIQUE,
+    original_url TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+```
+
+Alternatively, you can use the provided SQL migration file:
+
+```sh
+psql -U postgres -d shortlink -f migrations/2025-02-14-create-shortlink-table.sql
 ```
 
 ### Build and Run the Project
