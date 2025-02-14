@@ -2,6 +2,8 @@
 
 This project is a URL shortener service built with Rust, Warp, and PostgreSQL. It allows users to shorten long URLs and redirect to the original URLs using the shortened links.
 
+![URL Shortener Sample View](https://ibb.co.com/Qv0qnYqh)
+
 ## Features
 
 - Shorten long URLs
