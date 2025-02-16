@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize)]
 pub struct ShortenResponse {
     pub short_url: String,
-    pub qr_code: String, // Add QR code field
+    pub qr_code: String, 
 }
 
 /// Request structure for shortening URL.

@@ -30,5 +30,5 @@ ENV DATABASE_URL=postgres://postgres:Admin1234@db:5432/shortlink
 ENV BASE_URL=http://localhost:3030
 ENV PORT=3030
 
-# Migrate database sebelum menjalankan server
+# Run the binary
 CMD ["sh", "-c", "PGPASSWORD=Admin1234 psql -h db -U postgres -d shortlink -c \"CREATE TABLE IF NOT EXISTS shortlink (id SERIAL PRIMARY KEY, short_code VARCHAR(8) NOT NULL UNIQUE, original_url TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);\" && ./time_to_rust --port ${PORT}"]
