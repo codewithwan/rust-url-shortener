@@ -23,6 +23,9 @@ WORKDIR /usr/src/app
 # Copy the built binary from the builder stage
 COPY --from=builder /usr/src/app/target/release/time_to_rust .
 
+# Copy the migration script
+COPY migrations /usr/src/app/migrations
+
 EXPOSE ${PORT}
 
 ENV RUST_ENV=production
@@ -30,5 +33,5 @@ ENV DATABASE_URL=postgres://postgres:Admin1234@db:5432/shortlink
 ENV BASE_URL=http://localhost:3030
 ENV PORT=3030
 
-# Run the binary
-CMD ["sh", "-c", "PGPASSWORD=Admin1234 psql -h db -U postgres -d shortlink -c \"CREATE TABLE IF NOT EXISTS shortlink (id SERIAL PRIMARY KEY, short_code VARCHAR(8) NOT NULL UNIQUE, original_url TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);\" && ./time_to_rust --port ${PORT}"]
+# Run the migration script and then start the application
+CMD ["sh", "-c", "PGPASSWORD=Admin1234 psql -h db -U postgres -d shortlink -f /usr/src/app/migrations/2025-02-14-create-shortlink-table.sql && ./time_to_rust --port ${PORT}"]
