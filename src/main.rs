@@ -51,11 +51,10 @@ async fn main() {
         .recover(utils::validate::error_handler) 
         .with(warp::log("warp::server"));
 
-    let port = if env::var("RUST_ENV").unwrap_or_else(|_| "development".to_string()) == "production" {
-        env::var("PORT").unwrap_or_else(|_| "80".to_string()).parse().expect("Invalid port number")
-    } else {
-        3030
-    };
+    let port: u16 = env::var("PORT")
+        .unwrap_or_else(|_| "3030".to_string())
+        .parse()
+        .expect("PORT must be a number");
 
     println!("Server is running on port {}", port);
     warp::serve(routes).run(([127, 0, 0, 1], port)).await;

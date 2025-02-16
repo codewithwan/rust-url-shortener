@@ -8,7 +8,20 @@ pub async fn index() -> Result<impl Reply, Rejection> {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>URL Shortener</title>
+            <title>Linkie - URL Shortener</title>
+            <meta name="description" content="Linkie is a powerful URL shortener that transforms your long URLs into short, shareable links.">
+            <meta name="keywords" content="URL shortener, Linkie, shorten URL, shareable links, QR code generator">
+            <meta name="author" content="codewithwan">
+            <link rel="canonical" href="https://linkie.my.id">
+            <meta property="og:title" content="Linkie - URL Shortener">
+            <meta property="og:description" content="Transform your long URLs into short, shareable links with Linkie.">
+            <meta property="og:url" content="https://linkie.my.id">
+            <meta property="og:type" content="website">
+            <meta property="og:image" content="https://linkie.my.id/og-image.png">
+            <meta name="twitter:card" content="summary_large_image">
+            <meta name="twitter:title" content="Linkie - URL Shortener">
+            <meta name="twitter:description" content="Transform your long URLs into short, shareable links with Linkie.">
+            <meta name="twitter:image" content="https://linkie.my.id/twitter-image.png">
             <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
             <style>
                 @keyframes pulse {
