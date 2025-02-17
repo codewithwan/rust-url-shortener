@@ -14,12 +14,11 @@ use image::Luma;
 use image::codecs::png::PngEncoder;
 use image::ImageEncoder;
 use base64::engine::general_purpose::STANDARD as base64_std;
-use base64::Engine as _; 
+use base64::Engine as _;
 use std::io::Cursor;
-use redis::AsyncCommands;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use redis::aio::MultiplexedConnection;
+use deadpool_redis::Pool as RedisPool;
+use deadpool_redis::redis::AsyncCommands; 
+use deadpool_redis::redis::RedisResult;
 
 /// Handler to shorten a URL.
 pub async fn shorten_url(body: ShortenRequest, db_pool: Pool) -> Result<impl Reply, Rejection> {
@@ -60,34 +59,76 @@ pub async fn shorten_url(body: ShortenRequest, db_pool: Pool) -> Result<impl Rep
 pub async fn redirect_url(
     code: String,
     db_pool: Pool,
-    redis_pool: Arc<Mutex<MultiplexedConnection>>,
+    redis_pool: RedisPool,
 ) -> Result<Box<dyn Reply>, Rejection> {
-    let mut redis_conn = redis_pool.lock().await;
+    let mut redis_conn = redis_pool.get().await.map_err(|e| {
+        error!("Failed to get Redis connection: {:?}", e);
+        warp::reject::custom(DbError::DatabaseError)
+    })?;
 
-    // Check Redis first
-    if let Ok(Some(original_url)) = redis_conn.get::<_, Option<String>>(format!("short:{}", code)).await {
-        info!("Cache hit for {}", code);
-        let uri: warp::http::Uri = original_url.parse().unwrap();
-        return Ok(Box::new(warp::redirect::temporary(uri)));
+    // Add debug logging to track Redis operations
+    info!("Attempting to fetch from Redis for code: {}", code);
+    
+    let redis_key = format!("short:{}", code);
+    
+    // Try Redis get with explicit error logging
+    let redis_result: RedisResult<Option<String>> = redis_conn.get(&redis_key).await;
+    match redis_result {
+        Ok(Some(original_url)) => {
+            info!("Successfully retrieved URL from Redis: {}", original_url);
+            match original_url.parse::<warp::http::Uri>() {
+                Ok(uri) => return Ok(Box::new(warp::redirect::temporary(uri))),
+                Err(e) => {
+                    error!("Failed to parse URI from Redis: {:?}", e);
+                    return Err(warp::reject::custom(DbError::DatabaseError));
+                }
+            }
+        }
+        Ok(None) => {
+            info!("No URL found in Redis for key: {}", redis_key);
+        }
+        Err(e) => {
+            error!("Redis error: {:?}", e);
+        }
     }
 
-    // If not in Redis, check the database
-    let client = db_pool
-        .get()
-        .await
-        .map_err(|_| warp::reject::custom(DbError::DatabaseError))?;
-    if let Ok(Some(original_url)) = get_original_url(&client, &code).await {
-        let uri: warp::http::Uri = original_url.parse().unwrap();
+    // If Redis fails, proceed with database lookup
+    let client = db_pool.get().await.map_err(|e| {
+        error!("DB connection error: {:?}", e);
+        warp::reject::custom(DbError::DatabaseError)
+    })?;
 
-        // Save to Redis for faster access next time
-        let _: () = redis_conn.set_ex(format!("short:{}", code), &original_url, 3600).await.unwrap();
+    match get_original_url(&client, &code).await {
+        Ok(Some(original_url)) => {
+            let redis_set_result: RedisResult<()> = redis_conn
+                .set_ex(&redis_key, &original_url, 3600)
+                .await;
+            
+            match redis_set_result {
+                Ok(()) => info!("Successfully cached in Redis: {}", redis_key),
+                Err(e) => error!("Failed to cache in Redis: {:?}", e),
+            }
 
-        info!("Redirecting short code {} to {}", code, original_url);
-        return Ok(Box::new(warp::redirect::temporary(uri)));
-    } else {
-        info!("Short code {} not found, displaying 404 page", code);
-        let response = not_found().await?;
-        return Ok(Box::new(warp::reply::with_status(response.into_response(), StatusCode::NOT_FOUND)));
+            match original_url.parse::<warp::http::Uri>() {
+                Ok(uri) => {
+                    info!("Redirecting short code {} to {}", code, original_url);
+                    return Ok(Box::new(warp::redirect::temporary(uri)));
+                }
+                Err(e) => {
+                    error!("Failed to parse URI from database: {:?}", e);
+                    return Err(warp::reject::custom(DbError::DatabaseError));
+                }
+            }
+        }
+        Ok(None) => {
+            info!("Short code {} not found, displaying 404 page", code);
+            let response = not_found().await?;
+            return Ok(Box::new(warp::reply::with_status(response.into_response(), StatusCode::NOT_FOUND)));
+        }
+        Err(e) => {
+            error!("Database error: {:?}", e);
+            return Err(warp::reject::custom(DbError::DatabaseError));
+        }
     }
 }
 

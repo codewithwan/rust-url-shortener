@@ -1,16 +1,14 @@
-use redis::Client;
-use redis::aio::MultiplexedConnection;
+use deadpool_redis::{Config, Pool};
 use std::env;
+use log::info;
 
-pub async fn configure_redis() -> MultiplexedConnection {
+pub async fn configure_redis() -> Pool {
     let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-    let redis_client = Client::open(redis_url).expect("Failed to create Redis client");
+    info!("Connecting to Redis at {}", redis_url);
     
-    // Use get_multiplexed_async_connection() to avoid deprecation
-    let redis_pool = redis_client
-        .get_multiplexed_async_connection()
-        .await
-        .expect("Failed to connect to Redis");
+    let cfg = Config::from_url(redis_url);
+    let pool = cfg.create_pool(None).expect("Failed to create Redis pool");
 
-    redis_pool
+    info!("Successfully created Redis pool");
+    pool
 }

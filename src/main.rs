@@ -1,14 +1,13 @@
-use deadpool_postgres::{Manager, Pool};
 use dotenv::dotenv;
 use env_logger;
-use redis::AsyncCommands;
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio_postgres::{Config, NoTls};
 use utils::rate_limit::with_ip_rate_limit;
 use warp::Filter;
+use deadpool_redis::redis::AsyncCommands; 
+use config::db::configure_db;
 
 mod config;
 mod handlers;
@@ -25,17 +24,8 @@ async fn main() {
     dotenv().ok();
     env_logger::init();
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env");
-
-    // Parse the database URL
-    let config: Config = database_url.parse().expect("Invalid DATABASE_URL");
-
-    // Create Manager from the configured settings
-    let mgr = Manager::new(config, NoTls);
-    let pool = Pool::builder(mgr)
-        .max_size(16) // Maximum 16 connections in the pool
-        .build()
-        .unwrap();
+    // Configure the PostgreSQL database connection pool
+    let pool = configure_db().await;
 
     // Check database connection
     match pool.get().await {
@@ -49,12 +39,11 @@ async fn main() {
 
     // Configure Redis
     let redis_pool = config::redis::configure_redis().await;
-    let redis_pool = Arc::new(Mutex::new(redis_pool));
 
     // Check Redis connection
-    let mut conn = redis_pool.lock().await;
+    let mut conn = redis_pool.get().await.expect("Failed to get Redis connection");
     match conn.ping::<String>().await {
-        Ok(_) => println!("Successfully connected to Redis."),
+        Ok(pong) => println!("Successfully connected to Redis: {}", pong),
         Err(e) => {
             eprintln!("Failed to connect to Redis: {:?}", e);
             eprintln!("Please check the REDIS_URL and ensure the Redis server is reachable.");

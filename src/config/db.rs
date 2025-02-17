@@ -1,5 +1,8 @@
 use thiserror::Error;
-use tokio_postgres::Client;
+use tokio_postgres::{Client, Config, NoTls};
+use deadpool_postgres::{Manager, Pool};
+use std::env;
+use log::info;
 
 #[derive(Error, Debug)]
 pub enum DbError {
@@ -8,6 +11,22 @@ pub enum DbError {
 }
 
 impl warp::reject::Reject for DbError {}
+
+/// Configure the PostgreSQL database connection pool.
+pub async fn configure_db() -> Pool {
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env");
+    info!("Connecting to PostgreSQL at {}", database_url);
+
+    let config: Config = database_url.parse().expect("Invalid DATABASE_URL");
+    let mgr = Manager::new(config, NoTls);
+    let pool = Pool::builder(mgr)
+        .max_size(16) // Maximum 16 connections in the pool
+        .build()
+        .expect("Failed to create PostgreSQL pool");
+
+    info!("Successfully created PostgreSQL pool");
+    pool
+}
 
 /// Insert a shortlink into the database.
 pub async fn insert_shortlink(client: &Client, short_code: &str, original_url: &str) -> Result<(), DbError> {

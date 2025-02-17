@@ -1,15 +1,13 @@
 use crate::handlers::{handle_rejection, redirect_url, shorten_url};
 use crate::views::{index::index, not_found::not_found};
 use deadpool_postgres::Pool;
-use redis::aio::MultiplexedConnection;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use deadpool_redis::Pool as RedisPool;
 use warp::Filter;
 
 /// Create the routes for the application.
 pub fn create_routes(
     db_pool: Pool,
-    redis_pool: Arc<Mutex<MultiplexedConnection>>,
+    redis_pool: RedisPool,
 ) -> warp::filters::BoxedFilter<(impl warp::Reply,)> {
     let shorten = warp::post()
         .and(warp::path("shorten"))
@@ -45,8 +43,7 @@ fn with_db(
 
 /// Attach Redis connection to the filter.
 fn with_redis(
-    redis_pool: Arc<Mutex<MultiplexedConnection>>,
-) -> impl Filter<Extract = (Arc<Mutex<MultiplexedConnection>>,), Error = std::convert::Infallible> + Clone
-{
+    redis_pool: RedisPool,
+) -> impl Filter<Extract = (RedisPool,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || redis_pool.clone())
 }
