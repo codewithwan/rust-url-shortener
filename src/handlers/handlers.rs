@@ -1,4 +1,4 @@
-use crate::db::db::{get_original_url, insert_shortlink, DbError};
+use crate::config::db::{get_original_url, insert_shortlink, DbError};
 use crate::models::{ShortenRequest, ShortenResponse};
 use crate::utils::validate::validate_link;
 use crate::views::not_found::not_found;
@@ -16,6 +16,10 @@ use image::ImageEncoder;
 use base64::engine::general_purpose::STANDARD as base64_std;
 use base64::Engine as _; 
 use std::io::Cursor;
+use redis::AsyncCommands;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use redis::aio::MultiplexedConnection;
 
 /// Handler to shorten a URL.
 pub async fn shorten_url(body: ShortenRequest, db_pool: Pool) -> Result<impl Reply, Rejection> {
@@ -53,19 +57,37 @@ pub async fn shorten_url(body: ShortenRequest, db_pool: Pool) -> Result<impl Rep
 }
 
 /// Handler to redirect a shortened URL to the original URL.
-pub async fn redirect_url(code: String, db_pool: Pool) -> Result<Box<dyn Reply>, Rejection> {
+pub async fn redirect_url(
+    code: String,
+    db_pool: Pool,
+    redis_pool: Arc<Mutex<MultiplexedConnection>>,
+) -> Result<Box<dyn Reply>, Rejection> {
+    let mut redis_conn = redis_pool.lock().await;
+
+    // Check Redis first
+    if let Ok(Some(original_url)) = redis_conn.get::<_, Option<String>>(format!("short:{}", code)).await {
+        info!("Cache hit for {}", code);
+        let uri: warp::http::Uri = original_url.parse().unwrap();
+        return Ok(Box::new(warp::redirect::temporary(uri)));
+    }
+
+    // If not in Redis, check the database
     let client = db_pool
         .get()
         .await
         .map_err(|_| warp::reject::custom(DbError::DatabaseError))?;
     if let Ok(Some(original_url)) = get_original_url(&client, &code).await {
         let uri: warp::http::Uri = original_url.parse().unwrap();
+
+        // Save to Redis for faster access next time
+        let _: () = redis_conn.set_ex(format!("short:{}", code), &original_url, 3600).await.unwrap();
+
         info!("Redirecting short code {} to {}", code, original_url);
-        Ok(Box::new(warp::redirect::temporary(uri)))
+        return Ok(Box::new(warp::redirect::temporary(uri)));
     } else {
         info!("Short code {} not found, displaying 404 page", code);
         let response = not_found().await?;
-        Ok(Box::new(warp::reply::with_status(response.into_response(), StatusCode::NOT_FOUND)))
+        return Ok(Box::new(warp::reply::with_status(response.into_response(), StatusCode::NOT_FOUND)));
     }
 }
 
@@ -92,7 +114,7 @@ pub async fn handle_rejection(err: Rejection) -> Result<Box<dyn Reply>, Rejectio
             json(&serde_json::json!({ "error": "Too many requests, slow down!" })),
             StatusCode::TOO_MANY_REQUESTS,
         )))
-    } else if let Some(_) = err.find::<crate::db::db::DbError>() {
+    } else if let Some(_) = err.find::<crate::config::db::DbError>() {
         error!("Database error occurred");
         Ok(Box::new(with_status(
             json(&serde_json::json!({ "error": "Database error occurred" })),

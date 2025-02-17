@@ -1,1 +1,3 @@
-pub mod routes;
+mod routes;
+
+pub use routes::create_routes;
