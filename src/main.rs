@@ -7,7 +7,8 @@ use tokio::sync::Mutex;
 use utils::rate_limit::with_ip_rate_limit;
 use warp::Filter;
 use deadpool_redis::redis::AsyncCommands; 
-use config::db::configure_db;
+use db::db::configure_db;
+use db::redis::configure_redis;
 
 mod db;
 mod handlers;
@@ -38,7 +39,7 @@ async fn main() {
     }
 
     // Configure Redis
-    let redis_pool = config::redis::configure_redis().await;
+    let redis_pool = configure_redis().await;
 
     // Check Redis connection
     let mut conn = redis_pool.get().await.expect("Failed to get Redis connection");
