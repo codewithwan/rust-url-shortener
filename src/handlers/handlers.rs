@@ -1,4 +1,4 @@
-use crate::config::db::{get_original_url, insert_shortlink, DbError};
+use crate::db::db::{get_original_url, insert_shortlink, DbError};
 use crate::models::{ShortenRequest, ShortenResponse};
 use crate::utils::validate::validate_link;
 use crate::views::not_found::not_found;
@@ -155,7 +155,7 @@ pub async fn handle_rejection(err: Rejection) -> Result<Box<dyn Reply>, Rejectio
             json(&serde_json::json!({ "error": "Too many requests, slow down!" })),
             StatusCode::TOO_MANY_REQUESTS,
         )))
-    } else if let Some(_) = err.find::<crate::config::db::DbError>() {
+    } else if let Some(_) = err.find::<crate::db::db::DbError>() {
         error!("Database error occurred");
         Ok(Box::new(with_status(
             json(&serde_json::json!({ "error": "Database error occurred" })),

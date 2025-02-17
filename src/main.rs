@@ -9,7 +9,7 @@ use warp::Filter;
 use deadpool_redis::redis::AsyncCommands; 
 use config::db::configure_db;
 
-mod config;
+mod db;
 mod handlers;
 mod models;
 mod routes;

@@ -32,7 +32,7 @@ pub async fn error_handler(err: Rejection) -> Result<impl Reply, std::convert::I
             "Too many requests, slow down!",
             StatusCode::TOO_MANY_REQUESTS,
         ))
-    } else if err.find::<crate::config::db::DbError>().is_some() {
+    } else if err.find::<crate::db::db::DbError>().is_some() {
         Ok(warp::reply::with_status(
             "Database error",
             StatusCode::INTERNAL_SERVER_ERROR,
