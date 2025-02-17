@@ -35,3 +35,10 @@ fn with_db(
 ) -> impl Filter<Extract = (Pool,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db_pool.clone())
 }
+
+/// Attach Redis connection to the filter.
+fn with_redis(
+    redis_pool: redis::aio::Connection,
+) -> impl Filter<Extract = (redis::aio::Connection,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || redis_pool.clone())
+}

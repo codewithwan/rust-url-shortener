@@ -9,7 +9,7 @@ use tokio_postgres::{Config, NoTls};
 use utils::rate_limit::with_ip_rate_limit;
 use warp::Filter;
 
-mod db;
+mod config;
 mod handlers;
 mod models;
 mod routes;
