@@ -15,7 +15,7 @@ FROM debian:bookworm-slim
 
 # Install required libraries
 RUN apt-get update && apt-get install -y \
-    libssl-dev ca-certificates postgresql-client && \
+    libssl-dev ca-certificates postgresql-client redis-tools && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
@@ -30,6 +30,7 @@ EXPOSE ${PORT}
 
 ENV RUST_ENV=production
 ENV DATABASE_URL=postgres://postgres:Admin1234@db:5432/shortlink
+ENV REDIS_URL=redis://redis:6379
 ENV BASE_URL=http://localhost:3030
 ENV PORT=3030
 

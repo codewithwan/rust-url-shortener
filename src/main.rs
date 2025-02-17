@@ -1,6 +1,7 @@
 use deadpool_postgres::{Manager, Pool};
 use dotenv::dotenv;
 use env_logger;
+use redis::AsyncCommands;
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
@@ -15,6 +16,8 @@ mod models;
 mod routes;
 mod utils;
 mod views;
+
+use crate::routes::create_routes;
 
 /// Main function to start the server.
 #[tokio::main]
@@ -44,11 +47,26 @@ async fn main() {
         }
     }
 
+    // Configure Redis
+    let redis_pool = config::redis::configure_redis().await;
+    let redis_pool = Arc::new(Mutex::new(redis_pool));
+
+    // Check Redis connection
+    let mut conn = redis_pool.lock().await;
+    match conn.ping::<String>().await {
+        Ok(_) => println!("Successfully connected to Redis."),
+        Err(e) => {
+            eprintln!("Failed to connect to Redis: {:?}", e);
+            eprintln!("Please check the REDIS_URL and ensure the Redis server is reachable.");
+            std::process::exit(1);
+        }
+    }
+
     let rate_limiter = Arc::new(Mutex::new(HashMap::new()));
 
-    let routes = routes::routes::create_routes(pool.clone())
+    let routes = create_routes(pool.clone(), redis_pool.clone())
         .and(with_ip_rate_limit(rate_limiter.clone()))
-        .recover(utils::validate::error_handler) 
+        .recover(utils::validate::error_handler)
         .with(warp::log("warp::server"));
 
     let port: u16 = env::var("PORT")
