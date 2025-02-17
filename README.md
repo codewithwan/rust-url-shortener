@@ -48,10 +48,25 @@ Install PostgreSQL and Redis, then create a database named `shortlink`.
 Create a `.env` file in the root directory with the following content:
 
 ```properties
-DATABASE_URL=postgres://postgres:password@localhost:5432/shortlink
-REDIS_URL=redis://127.0.0.1/
+# PostgreSQL
+POSTGRES_USER=your_postgres_user
+POSTGRES_PASSWORD=your_postgres_password
+POSTGRES_DB=your_postgres_db
+DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Application
 BASE_URL=http://localhost:3030
 RUST_ENV=development
+PORT=3030
+```
+
+Alternatively, you can use the provided `.env.example` file as a template:
+
+```sh
+cp .env.example .env
 ```
 
 ### Run Database Migrations

@@ -4,13 +4,13 @@ services:
   db:
     image: postgres:latest
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Admin1234
-      POSTGRES_DB: shortlink
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
       interval: 5s
       retries: 5
 
@@ -28,11 +28,14 @@ services:
     ports:
       - "3030:3030"
     environment:
-      - RUST_ENV=production
-      - DATABASE_URL=postgres://postgres:Admin1234@db:5432/shortlink
-      - REDIS_URL=redis://redis:6379
-      - BASE_URL=http://localhost:3030
-      - PORT=3030
+      - RUST_ENV=${RUST_ENV}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - BASE_URL=${BASE_URL}
+      - PORT=${PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy
