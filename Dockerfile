@@ -25,6 +25,8 @@ COPY --from=builder /usr/src/app/target/release/time_to_rust .
 
 # Copy the migration script
 COPY migrations /usr/src/app/migrations
+COPY scripts/init_db.sh /usr/src/app/init_db.sh
+RUN chmod +x /usr/src/app/init_db.sh
 
 EXPOSE ${PORT}
 
@@ -35,4 +37,4 @@ ENV BASE_URL=${BASE_URL}
 ENV PORT=${PORT}
 
 # Run the migration script and then start the application
-CMD ["sh", "-c", "PGPASSWORD=${POSTGRES_PASSWORD} psql -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /usr/src/app/migrations/2025-02-14-create-shortlink-table.sql && ./time_to_rust --port ${PORT}"]
+CMD ["/usr/src/app/init_db.sh"]
