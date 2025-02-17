@@ -397,6 +397,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "deadpool-redis"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "011ead1ec511457e06577f438fbb3a8c3de6c65c669bca9c95ed4dca6c396f6f"
+dependencies = [
+ "deadpool",
+ "redis 0.28.2",
+]
+
+[[package]]
 name = "deadpool-runtime"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1610,6 +1620,26 @@ dependencies = [
 
 [[package]]
 name = "redis"
+version = "0.28.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e37ec3fd44bea2ec947ba6cc7634d7999a6590aca7c35827c250bc0de502bda6"
+dependencies = [
+ "arc-swap",
+ "bytes",
+ "combine",
+ "futures-util",
+ "itoa",
+ "num-bigint",
+ "percent-encoding",
+ "pin-project-lite",
+ "ryu",
+ "tokio",
+ "tokio-util",
+ "url",
+]
+
+[[package]]
+name = "redis"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9568894e8bdefd16512bca9e286a9d2abc27773609aa4eb7f428497d64df4373"
@@ -1973,12 +2003,13 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "deadpool-postgres",
+ "deadpool-redis",
  "dotenv",
  "env_logger",
  "image",
  "log",
  "qrcode",
- "redis",
+ "redis 0.29.0",
  "regex",
  "serde",
  "serde_json",

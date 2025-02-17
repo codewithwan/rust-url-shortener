@@ -19,4 +19,6 @@ thiserror = "*"
 qrcode = "0.14.1"
 image = "0.25.5"
 base64 = "0.22.1"
-redis = {version = "0.29", features = ["tokio-comp"]}
+redis = { version = "0.29", features = ["tokio-comp"] }
+deadpool-redis = "*" 
+
